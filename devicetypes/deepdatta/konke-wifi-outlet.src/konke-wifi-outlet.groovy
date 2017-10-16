@@ -19,8 +19,9 @@
  
 metadata {
 	definition (name: "Konke WiFi Outlet", namespace: "deepdatta", author: "Deep Datta") {
-		capability "Health Check"
-		capability "Outlet"
+		capability "Switch"
+        capability "Refresh"
+        capability "Polling"
 	}
 
 
@@ -30,6 +31,17 @@ metadata {
 
 	tiles {
 		// TODO: define your main and details tiles here
+      	standardTile("switch", "device.switch") {
+    		// use the state name as the label ("off" and "on")
+    		state "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff"
+    		state "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#00a0dc"
+		}
+		standardTile("refresh", "device.refresh", inactiveLabel: false, decoration: "flat") {
+			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
+		}
+
+		main "switch"
+		details(["switch","refresh"])
 	}
 }
 
@@ -40,15 +52,16 @@ def parse(String description) {
 	// TODO: handle 'DeviceWatch-DeviceStatus' attribute
 	// TODO: handle 'switch' attribute
 
-	def msg = parseLanMessage(description)
-    log.debug "msg: ${msg}"
+	def    msg  = parseLanMessage(description)
+    String resp = msg.body.toString().trim()
+    log.debug "resp: ${resp}"
     
-    if (msg.body == 'OK') {
+    if (resp == 'OK') {
     	log.debug "Set command was Successful!"
-    } else if (msg.body == 'on') {
+    } else if (resp == 'on') {
     	log.debug "Outlet is On"
    		sendEvent(name: "switch", value: "on")
-	} else if (msg.body == 'off') {
+	} else if (resp == 'off') {
     	log.debug "Outlet is Off"
    		sendEvent(name: "switch", value: "off")
     } else {
@@ -56,23 +69,16 @@ def parse(String description) {
     }
 }
 
-// Helper utils
-def send_cgi_comms(command) {
-	def send_cgi_commsAction = new physicalgraph.device.HubAction(
-        method: "GET",
-        path: "/cgi-bin/lightswitch.cgi?${command}",
-        headers: [
-            HOST:"${ip}:80"
-        ]
-    )
-    log.debug("Executing hubAction on ${addr}") // + getOutletAddress())
-    send_cgi_commsAction 
+// handle commands
+def initialize() {
+	log.debug "Executing 'installed'"
+    refresh()
 }
 
-// handle commands
-def ping() {
-	log.debug "Executing 'ping'"
-	// TODO: handle 'ping' command
+def refresh() {
+	log.debug "Executing 'refresh'"
+    setDeviceNetworkId(ip, 80)
+	// TODO: handle 'refresh' command
     send_cgi_comms("state")
 }
 
@@ -80,12 +86,48 @@ def off() {
 	log.debug "Executing 'off'"
 	// TODO: handle 'off' command
     send_cgi_comms("off")
-    ping()  
+    refresh()  
 }
 
 def on() {
 	log.debug "Executing 'on'"
 	// TODO: handle 'on' command
     send_cgi_comms("on")
-    ping()
+    refresh()
+}
+
+def polling() {
+	refresh()
+}
+
+// Helper utils
+private def send_cgi_comms(command) {
+	def result = new physicalgraph.device.HubAction(
+        method: "GET",
+        path: "/cgi-bin/lightswitch.cgi?${command}",
+        headers: [
+            HOST:"${ip}:80"
+        ]
+    )
+    log.debug "Executing hubAction '${command}' on ${ip}"
+    return result
+}
+
+private setDeviceNetworkId(ip, port){
+	def iphex = convertIPtoHex(ip)
+    def porthex = convertPortToHex(port)
+    def hexVal = "$iphex:$porthex"
+  	device.deviceNetworkId = "${hexVal}"
+  	//log.debug "Device Network Id set to ${hexVal}" //:${porthex}"
+    return hexVal
+}
+
+private String convertPortToHex(port) {
+	String hexport = port.toString().format( '%04x', port.toInteger() )
+    return hexport
+}
+
+private String convertIPtoHex(ipAddress) { 
+    String hex = ipAddress.tokenize( '.' ).collect {  String.format( '%02x', it.toInteger() ) }.join()
+    return hex
 }
