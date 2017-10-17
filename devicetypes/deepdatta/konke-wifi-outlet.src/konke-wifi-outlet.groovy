@@ -56,17 +56,19 @@ def parse(String description) {
     String resp = msg.body.toString().trim()
     log.debug "resp: ${resp}"
     
+    def event = createEvent(name: "switch", value: "off")
     if (resp == 'OK') {
     	log.debug "Set command was Successful!"
+        event.value = device.currentValue("switch")
     } else if (resp == 'on') {
     	log.debug "Outlet is On"
-   		sendEvent(name: "switch", value: "on")
+        event.value = "on"
 	} else if (resp == 'off') {
     	log.debug "Outlet is Off"
-   		sendEvent(name: "switch", value: "off")
     } else {
     	log.debug "Set command failed!"
     }
+    return event
 }
 
 // handle commands
@@ -85,15 +87,15 @@ def refresh() {
 def off() {
 	log.debug "Executing 'off'"
 	// TODO: handle 'off' command
+    sendEvent(name: "switch", value: "off")
     send_cgi_comms("off")
-    refresh()  
 }
 
 def on() {
 	log.debug "Executing 'on'"
 	// TODO: handle 'on' command
+    sendEvent(name: "switch", value: "on")
     send_cgi_comms("on")
-    refresh()
 }
 
 def polling() {
