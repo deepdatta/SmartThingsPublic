@@ -21,7 +21,6 @@ metadata {
 	definition (name: "Konke WiFi Outlet", namespace: "deepdatta", author: "Deep Datta") {
 		capability "Switch"
         capability "Refresh"
-        capability "Polling"
 	}
 
 
@@ -47,7 +46,7 @@ metadata {
 
 // parse events into attributes
 def parse(String description) {
-	log.debug "Parsing '${description}'"
+	// log.debug "Parsing '${description}'"
 	// TODO: handle 'checkInterval' attribute
 	// TODO: handle 'DeviceWatch-DeviceStatus' attribute
 	// TODO: handle 'switch' attribute
@@ -72,7 +71,7 @@ def parse(String description) {
 }
 
 // handle commands
-def initialize() {
+def installed() {
 	log.debug "Executing 'installed'"
     refresh()
 }
@@ -96,10 +95,6 @@ def on() {
 	// TODO: handle 'on' command
     sendEvent(name: "switch", value: "on")
     send_cgi_comms("on")
-}
-
-def polling() {
-	refresh()
 }
 
 // Helper utils
